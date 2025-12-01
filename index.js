@@ -1,3 +1,4 @@
+// backend/index.js
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
@@ -5,9 +6,7 @@ const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
 
-const OpenAI = require("openai");     // ✅ NEW (official SDK)
-const client = new OpenAI();
-
+const extractCourses = require("./ocr/extractCourses");
 const parseSlots = require("./timetable/parseSlots");
 const generateTimetable = require("./timetable/generateTimetable");
 const slotsLookup = require("./slots/slots.json");
@@ -17,100 +16,159 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Multer uploads folder
 const upload = multer({ dest: "uploads/" });
 
-// Ensure folders
-const UPLOADS = path.join(__dirname, "uploads");
-const SAVED = path.join(__dirname, "saved_timetables");
-if (!fs.existsSync(UPLOADS)) fs.mkdirSync(UPLOADS, { recursive: true });
-if (!fs.existsSync(SAVED)) fs.mkdirSync(SAVED, { recursive: true });
+// Ensure uploads and saved directories exist
+const uploadsDir = path.join(__dirname, "uploads");
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
-// Health check for Render
-app.get("/healthz", (req, res) => res.json({ ok: true }));
+const SAVED_DIR = path.join(__dirname, "saved_timetables");
+if (!fs.existsSync(SAVED_DIR)) fs.mkdirSync(SAVED_DIR, { recursive: true });
 
-// =============================
-// 📌 FIXED OCR FUNCTION
-// =============================
-async function extractCourses(imagePath) {
-  try {
-    const img = fs.readFileSync(imagePath, { encoding: "base64" });
-
-    const response = await client.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are an OCR engine. Extract rows of courses strictly in JSON. Each row MUST have: courseCode, courseName, type, venue, slotString."
-        },
-        {
-          role: "user",
-          content: [
-            { type: "input_text", text: "Extract this timetable." },
-            { type: "input_image", image_url: `data:image/png;base64,${img}` }
-          ]
-        }
-      ]
-    });
-
-    const raw = response.choices[0].message.content.trim();
-
-    // **Absolute fix** for bad AI formatting
-    const clean = raw
-      .replace(/```json/gi, "")
-      .replace(/```/g, "")
-      .trim();
-
-    const parsed = JSON.parse(clean);
-    return parsed.rows || parsed;
-  } catch (err) {
-    console.error("OCR ERROR:", err);
-    throw new Error("OCR failed: Invalid JSON");
-  }
+// Validate OpenAI Key (dev bypass)
+if (!process.env.OPENAI_API_KEY && process.env.ALLOW_NO_OPENAI !== "1") {
+  console.error("ERROR: Missing OPENAI_API_KEY and ALLOW_NO_OPENAI!==1 — backend will exit.");
+  process.exit(1);
 }
 
-// =============================
-// 📌 UPLOAD ENDPOINT
-// =============================
+app.get("/", (req, res) => res.send("Vitwise Backend Running Successfully!"));
+app.get("/ping", (req, res) => res.json({ ok: true, time: Date.now() }));
+app.get("/healthz", (req, res) => res.json({ ok: true }));
+
+// upload endpoint
 app.post("/api/upload", upload.single("image"), async (req, res) => {
-  const file = req.file?.path;
-  if (!file) return res.status(400).json({ error: "No file uploaded" });
-
+  const uploadedPath = req.file?.path;
   try {
-    const extracted = await extractCourses(file);
-    const warnings = [];
+    if (!req.file) {
+      console.warn("Upload called with no file");
+      return res.status(400).json({ error: "No file uploaded" });
+    }
 
+    console.log("Uploaded file:", req.file.path);
+
+    // Extract using OCR helper
+    const extracted = await extractCourses(req.file.path);
+    if (!Array.isArray(extracted)) {
+      console.error("OCR returned invalid structure:", extracted);
+      return res.status(500).json({ error: "OCR returned invalid structure" });
+    }
+
+    const warnings = [];
     const courses = extracted.map((row) => ({
       courseCode: row.courseCode,
       courseName: row.courseName || courseNames[row.courseCode] || row.courseCode,
       type: row.type,
-      venue: row.venue || "NIL",
+      venue: row.venue,
       rawSlotString: row.slotString,
-      slots: parseSlots(row.slotString)
+      slots: parseSlots(row.slotString),
     }));
 
     // Validate slots
     courses.forEach((c) => {
-      c.slots.forEach((s) => {
-        if (!slotsLookup[s])
-          warnings.push({ slot: s, course: c.courseCode });
+      (c.slots || []).forEach((s) => {
+        if (!slotsLookup[s]) warnings.push({ type: "missing_slot", slot: s, course: c.courseCode });
       });
     });
 
     const timetable = generateTimetable(courses);
 
-    res.json({ timetable, warnings });
+    const counts = Object.fromEntries(Object.keys(timetable).map((d) => [d, timetable[d].length]));
+    console.log("Timetable counts by day:", counts);
+
+    return res.json({ timetable, warnings });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error in /api/upload:", err && err.stack ? err.stack : err);
+    return res.status(500).json({ error: err.message || "Internal server error" });
   } finally {
-    if (file) fs.unlink(file, () => {});
+    // best-effort cleanup
+    if (uploadedPath) {
+      fs.unlink(uploadedPath, (e) => e && console.warn("Cleanup failed for", uploadedPath, e.message));
+    }
   }
 });
 
-// =============================
-// 📌 START SERVER
-// =============================
+// --- simple auth & save/load endpoints (unchanged behavior but safer)
+const users = {};
+const otps = {};
+
+function generateOtp() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+app.post("/api/signup", (req, res) => {
+  const { username, password, phone } = req.body || {};
+  if (!username || !password || !phone) return res.status(400).json({ error: "username,password,phone required" });
+  if (users[phone]) return res.status(409).json({ error: "User already exists" });
+  users[phone] = { username, password, phone };
+  return res.json({ ok: true });
+});
+
+app.post("/api/login", (req, res) => {
+  const { phone, password } = req.body || {};
+  const u = users[phone];
+  if (!u) return res.status(404).json({ error: "User not found" });
+  if (u.password !== password) return res.status(401).json({ error: "Invalid credentials" });
+  const token = Buffer.from(`${phone}:${Date.now()}`).toString("base64");
+  return res.json({ token, username: u.username });
+});
+
+app.post("/api/send-otp", (req, res) => {
+  const { phone } = req.body || {};
+  if (!phone) return res.status(400).json({ error: "phone required" });
+  const code = generateOtp();
+  otps[phone] = { code, expiresAt: Date.now() + 5 * 60 * 1000 };
+  // dev mode: return code
+  return res.json({ ok: true, otp: code });
+});
+
+app.post("/api/verify-otp", (req, res) => {
+  const { phone, code } = req.body || {};
+  if (!phone || !code) return res.status(400).json({ error: "phone and code required" });
+  const record = otps[phone];
+  if (!record) return res.status(404).json({ error: "OTP not found" });
+  if (Date.now() > record.expiresAt) return res.status(410).json({ error: "OTP expired" });
+  if (record.code !== code) return res.status(401).json({ error: "Invalid OTP" });
+  delete otps[phone];
+  return res.json({ ok: true });
+});
+
+function phoneFromToken(token) {
+  try {
+    return Buffer.from(token, "base64").toString("utf8").split(":")[0];
+  } catch {
+    return null;
+  }
+}
+
+app.post("/api/save-timetable", (req, res) => {
+  const token = (req.headers.authorization || "").replace("Bearer ", "");
+  const phone = phoneFromToken(token);
+  if (!phone) return res.status(401).json({ error: "Invalid token" });
+  const file = path.join(SAVED_DIR, `${phone}.json`);
+  try {
+    fs.writeFileSync(file, JSON.stringify({ timetable: req.body.timetable || req.body, savedAt: Date.now() }, null, 2));
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error("save-timetable failed", e);
+    return res.status(500).json({ error: "save failed" });
+  }
+});
+
+app.get("/api/load-timetable", (req, res) => {
+  const token = (req.headers.authorization || "").replace("Bearer ", "");
+  const phone = phoneFromToken(token);
+  if (!phone) return res.status(401).json({ error: "Invalid token" });
+  const file = path.join(SAVED_DIR, `${phone}.json`);
+  if (!fs.existsSync(file)) return res.status(404).json({ error: "Not found" });
+  try {
+    const content = JSON.parse(fs.readFileSync(file, "utf8"));
+    return res.json(content);
+  } catch (e) {
+    console.error("load-timetable failed", e);
+    return res.status(500).json({ error: "load failed" });
+  }
+});
+
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, "0.0.0.0", () =>
-  console.log("Backend running on:", PORT)
-);
+app.listen(PORT, "0.0.0.0", () => console.log(`Backend running on ${PORT}`));

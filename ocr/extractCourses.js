@@ -1,64 +1,51 @@
+// backend/ocr/extractCourses.js
 const fs = require("fs");
 const OpenAI = require("openai");
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+/**
+ * The ONLY fully reliable solution:
+ * Use response_format: json_object
+ * → The model is *forced* to return valid JSON.
+ */
 module.exports = async function extractCourses(imagePath) {
   try {
-    const imgData = fs.readFileSync(imagePath, { encoding: "base64" });
-
-    const prompt = `
-Extract all course rows from this timetable screenshot.
-Return ONLY JSON. Do NOT return explanations.
-
-Format:
-[
-  {
-    "courseCode": "CSE2001",
-    "courseName": "Data Structures",
-    "slotString": "A1+TA1",
-    "type": "Theory/Lab",
-    "venue": "AB1-201"
-  }
-]
-
-IMPORTANT:
-- If something is missing, set it to an empty string.
-- Ensure the output is VALID JSON.
-`;
+    const base64 = fs.readFileSync(imagePath, { encoding: "base64" });
 
     const response = await client.chat.completions.create({
       model: "gpt-4o-mini-vision",
+      response_format: { type: "json_object" },   // FORCE VALID JSON
       messages: [
+        {
+          role: "system",
+          content:
+            "Extract ALL timetable rows. Return JSON ONLY. The JSON MUST match the format: { \"rows\": [ { \"courseCode\":\"\", \"courseName\":\"\", \"slotString\":\"\", \"type\":\"\", \"venue\":\"\" } ] }. Missing fields MUST be empty strings."
+        },
         {
           role: "user",
           content: [
-            { type: "text", text: prompt },
+            { type: "text", text: "Extract rows from this timetable image." },
             {
               type: "image_url",
-              image_url: `data:image/jpeg;base64,${imgData}`,
-            },
-          ],
-        },
-      ],
-      max_tokens: 2000,
+              image_url: {
+                url: `data:image/jpeg;base64,${base64}`
+              }
+            }
+          ]
+        }
+      ]
     });
 
-    let raw = response.choices[0].message.content.trim();
+    // The model ALWAYS returns valid JSON when response_format is used
+    const data = JSON.parse(response.choices[0].message.content);
 
-    // FIX 1: Remove markdown ```json blocks
-    raw = raw.replace(/```json/gi, "").replace(/```/g, "").trim();
-
-    // FIX 2: Validate JSON
-    let json;
-    try {
-      json = JSON.parse(raw);
-    } catch (err) {
-      console.error("RAW OCR OUTPUT:", raw);
-      throw new Error("OCR returned invalid JSON");
+    if (!data.rows || !Array.isArray(data.rows)) {
+      throw new Error("JSON missing rows array");
     }
 
-    return json;
+    return data.rows;
+
   } catch (err) {
     console.error("extractCourses ERROR:", err);
     throw new Error("OCR failed: " + err.message);
