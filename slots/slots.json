@@ -1,0 +1,319 @@
+{
+  "A1": [
+    { "day": "Monday", "start": "08:00", "end": "08:50", "type": "Theory" },
+    { "day": "Wednesday", "start": "09:00", "end": "09:50", "type": "Theory" }
+  ],
+  "B1": [
+    { "day": "Tuesday", "start": "08:00", "end": "08:50", "type": "Theory" },
+    { "day": "Thursday", "start": "09:00", "end": "09:50", "type": "Theory" }
+  ],
+  "C1": [
+    { "day": "Wednesday", "start": "08:00", "end": "08:50", "type": "Theory" },
+    { "day": "Friday", "start": "09:00", "end": "09:50", "type": "Theory" }
+  ],
+  "D1": [
+    { "day": "Monday", "start": "10:00", "end": "10:50", "type": "Theory" },
+    { "day": "Thursday", "start": "08:00", "end": "08:50", "type": "Theory" }
+  ],
+  "E1": [
+    { "day": "Tuesday", "start": "10:00", "end": "10:50", "type": "Theory" },
+    { "day": "Friday", "start": "08:00", "end": "08:50", "type": "Theory" }
+  ],
+  "F1": [
+    { "day": "Monday", "start": "09:00", "end": "09:50", "type": "Theory" },
+    { "day": "Wednesday", "start": "10:00", "end": "10:50", "type": "Theory" }
+  ],
+  "G1": [
+    { "day": "Tuesday", "start": "09:00", "end": "09:50", "type": "Theory" },
+    { "day": "Thursday", "start": "10:00", "end": "10:50", "type": "Theory" }
+  ],
+  "TA1": [
+    { "day": "Friday", "start": "10:00", "end": "10:50", "type": "Theory" }
+  ],
+  "TB1": [
+    { "day": "Monday", "start": "11:00", "end": "11:50", "type": "Theory" }
+  ],
+  "TC1": [
+    { "day": "Tuesday", "start": "11:00", "end": "11:50", "type": "Theory" }
+  ],
+  "TD1": [
+    { "day": "Friday", "start": "12:00", "end": "12:50", "type": "Theory" }
+  ],
+  "TE1": [
+    { "day": "Thursday", "start": "11:00", "end": "11:50", "type": "Theory" }
+  ],
+  "TF1": [
+    { "day": "Friday", "start": "11:00", "end": "11:50", "type": "Theory" }
+  ],
+  "TG1": [
+    { "day": "Monday", "start": "12:00", "end": "12:50", "type": "Theory" }
+  ],
+  "TAA1": [
+    { "day": "Tuesday", "start": "12:00", "end": "12:50", "type": "Theory" }
+  ],
+  "TCC1": [
+    { "day": "Thursday", "start": "12:00", "end": "12:50", "type": "Theory" }
+  ],
+  "V1": [
+    { "day": "Wednesday", "start": "11:00", "end": "11:50", "type": "Theory" }
+  ],
+  "V2": [
+    { "day": "Wednesday", "start": "12:00", "end": "12:50", "type": "Theory" }
+  ],
+  "A2": [
+    { "day": "Monday", "start": "14:00", "end": "14:50", "type": "Theory" },
+    { "day": "Wednesday", "start": "15:00", "end": "15:50", "type": "Theory" }
+  ],
+  "B2": [
+    { "day": "Tuesday", "start": "14:00", "end": "14:50", "type": "Theory" },
+    { "day": "Thursday", "start": "15:00", "end": "15:50", "type": "Theory" }
+  ],
+  "C2": [
+    { "day": "Wednesday", "start": "14:00", "end": "14:50", "type": "Theory" },
+    { "day": "Friday", "start": "15:00", "end": "15:50", "type": "Theory" }
+  ],
+  "D2": [
+    { "day": "Monday", "start": "16:00", "end": "16:50", "type": "Theory" },
+    { "day": "Thursday", "start": "14:00", "end": "14:50", "type": "Theory" }
+  ],
+  "E2": [
+    { "day": "Tuesday", "start": "16:00", "end": "16:50", "type": "Theory" },
+    { "day": "Friday", "start": "14:00", "end": "14:50", "type": "Theory" }
+  ],
+  "F2": [
+    { "day": "Monday", "start": "15:00", "end": "15:50", "type": "Theory" },
+    { "day": "Wednesday", "start": "16:00", "end": "16:50", "type": "Theory" }
+  ],
+  "G2": [
+    { "day": "Tuesday", "start": "15:00", "end": "15:50", "type": "Theory" },
+    { "day": "Thursday", "start": "16:00", "end": "16:50", "type": "Theory" }
+  ],
+  "TA2": [
+    { "day": "Friday", "start": "16:00", "end": "16:50", "type": "Theory" }
+  ],
+  "TB2": [
+    { "day": "Monday", "start": "17:00", "end": "17:50", "type": "Theory" }
+  ],
+  "TC2": [
+    { "day": "Tuesday", "start": "17:00", "end": "17:50", "type": "Theory" }
+  ],
+  "TD2": [
+    { "day": "Wednesday", "start": "17:00", "end": "17:50", "type": "Theory" }
+  ],
+  "TE2": [
+    { "day": "Thursday", "start": "17:00", "end": "17:50", "type": "Theory" }
+  ],
+  "TF2": [
+    { "day": "Friday", "start": "17:00", "end": "17:50", "type": "Theory" }
+  ],
+  "TG2": [
+    { "day": "Monday", "start": "18:00", "end": "18:50", "type": "Theory" }
+  ],
+  "TAA2": [
+    { "day": "Tuesday", "start": "18:00", "end": "18:50", "type": "Theory" }
+  ],
+  "TBB2": [
+    { "day": "Wednesday", "start": "18:00", "end": "18:50", "type": "Theory" }
+  ],
+  "TCC2": [
+    { "day": "Thursday", "start": "18:00", "end": "18:50", "type": "Theory" }
+  ],
+  "TDD2": [
+    { "day": "Friday", "start": "18:00", "end": "18:50", "type": "Theory" }
+  ],
+  "V3": [
+    { "day": "Monday", "start": "19:01", "end": "19:50", "type": "Theory" }
+  ],
+  "V4": [
+    { "day": "Tuesday", "start": "19:01", "end": "19:50", "type": "Theory" }
+  ],
+  "V5": [
+    { "day": "Wednesday", "start": "19:01", "end": "19:50", "type": "Theory" }
+  ],
+  "V6": [
+    { "day": "Thursday", "start": "19:01", "end": "19:50", "type": "Theory" }
+  ],
+  "V7": [
+    { "day": "Friday", "start": "19:01", "end": "19:50", "type": "Theory" }
+  ],
+  "L1": [
+    { "day": "Monday", "start": "08:00", "end": "08:50", "type": "Lab" }
+  ],
+  "L2": [
+    { "day": "Monday", "start": "08:51", "end": "09:40", "type": "Lab" }
+  ],
+  "L3": [
+    { "day": "Monday", "start": "09:51", "end": "10:40", "type": "Lab" }
+  ],
+  "L4": [
+    { "day": "Monday", "start": "10:41", "end": "11:30", "type": "Lab" }
+  ],
+  "L5": [
+    { "day": "Monday", "start": "11:40", "end": "12:30", "type": "Lab" }
+  ],
+  "L6": [
+    { "day": "Monday", "start": "12:31", "end": "13:20", "type": "Lab" }
+  ],
+  "L7": [
+    { "day": "Tuesday", "start": "08:00", "end": "08:50", "type": "Lab" }
+  ],
+  "L8": [
+    { "day": "Tuesday", "start": "08:51", "end": "09:40", "type": "Lab" }
+  ],
+  "L9": [
+    { "day": "Tuesday", "start": "09:51", "end": "10:40", "type": "Lab" }
+  ],
+  "L10": [
+    { "day": "Tuesday", "start": "10:41", "end": "11:30", "type": "Lab" }
+  ],
+  "L11": [
+    { "day": "Tuesday", "start": "11:40", "end": "12:30", "type": "Lab" }
+  ],
+  "L12": [
+    { "day": "Tuesday", "start": "12:31", "end": "13:20", "type": "Lab" }
+  ],
+  "L13": [
+    { "day": "Wednesday", "start": "08:00", "end": "08:50", "type": "Lab" }
+  ],
+  "L14": [
+    { "day": "Wednesday", "start": "08:51", "end": "09:40", "type": "Lab" }
+  ],
+  "L15": [
+    { "day": "Wednesday", "start": "09:51", "end": "10:40", "type": "Lab" }
+  ],
+  "L16": [
+    { "day": "Wednesday", "start": "10:41", "end": "11:30", "type": "Lab" }
+  ],
+  "L17": [
+    { "day": "Wednesday", "start": "11:40", "end": "12:30", "type": "Lab" }
+  ],
+  "L18": [
+    { "day": "Wednesday", "start": "12:31", "end": "13:20", "type": "Lab" }
+  ],
+  "L19": [
+    { "day": "Thursday", "start": "08:00", "end": "08:50", "type": "Lab" }
+  ],
+  "L20": [
+    { "day": "Thursday", "start": "08:51", "end": "09:40", "type": "Lab" }
+  ],
+  "L21": [
+    { "day": "Thursday", "start": "09:51", "end": "10:40", "type": "Lab" }
+  ],
+  "L22": [
+    { "day": "Thursday", "start": "10:41", "end": "11:30", "type": "Lab" }
+  ],
+  "L23": [
+    { "day": "Thursday", "start": "11:40", "end": "12:30", "type": "Lab" }
+  ],
+  "L24": [
+    { "day": "Thursday", "start": "12:31", "end": "13:20", "type": "Lab" }
+  ],
+  "L25": [
+    { "day": "Friday", "start": "08:00", "end": "08:50", "type": "Lab" }
+  ],
+  "L26": [
+    { "day": "Friday", "start": "08:51", "end": "09:40", "type": "Lab" }
+  ],
+  "L27": [
+    { "day": "Friday", "start": "09:51", "end": "10:40", "type": "Lab" }
+  ],
+  "L28": [
+    { "day": "Friday", "start": "10:41", "end": "11:30", "type": "Lab" }
+  ],
+  "L29": [
+    { "day": "Friday", "start": "11:40", "end": "12:30", "type": "Lab" }
+  ],
+  "L30": [
+    { "day": "Friday", "start": "12:31", "end": "13:20", "type": "Lab" }
+  ],
+  "L31": [
+    { "day": "Monday", "start": "14:00", "end": "14:50", "type": "Lab" }
+  ],
+  "L32": [
+    { "day": "Monday", "start": "14:51", "end": "15:40", "type": "Lab" }
+  ],
+  "L33": [
+    { "day": "Monday", "start": "15:51", "end": "16:40", "type": "Lab" }
+  ],
+  "L34": [
+    { "day": "Monday", "start": "16:41", "end": "17:30", "type": "Lab" }
+  ],
+  "L35": [
+    { "day": "Monday", "start": "17:40", "end": "18:30", "type": "Lab" }
+  ],
+  "L36": [
+    { "day": "Monday", "start": "18:31", "end": "19:20", "type": "Lab" }
+  ],
+  "L37": [
+    { "day": "Tuesday", "start": "14:00", "end": "14:50", "type": "Lab" }
+  ],
+  "L38": [
+    { "day": "Tuesday", "start": "14:51", "end": "15:40", "type": "Lab" }
+  ],
+  "L39": [
+    { "day": "Tuesday", "start": "15:51", "end": "16:40", "type": "Lab" }
+  ],
+  "L40": [
+    { "day": "Tuesday", "start": "16:41", "end": "17:30", "type": "Lab" }
+  ],
+  "L41": [
+    { "day": "Tuesday", "start": "17:40", "end": "18:30", "type": "Lab" }
+  ],
+  "L42": [
+    { "day": "Tuesday", "start": "18:31", "end": "19:20", "type": "Lab" }
+  ],
+  "L43": [
+    { "day": "Wednesday", "start": "14:00", "end": "14:50", "type": "Lab" }
+  ],
+  "L44": [
+    { "day": "Wednesday", "start": "14:51", "end": "15:40", "type": "Lab" }
+  ],
+  "L45": [
+    { "day": "Wednesday", "start": "15:51", "end": "16:40", "type": "Lab" }
+  ],
+  "L46": [
+    { "day": "Wednesday", "start": "16:41", "end": "17:30", "type": "Lab" }
+  ],
+  "L47": [
+    { "day": "Wednesday", "start": "17:40", "end": "18:30", "type": "Lab" }
+  ],
+  "L48": [
+    { "day": "Wednesday", "start": "18:31", "end": "19:20", "type": "Lab" }
+  ],
+  "L49": [
+    { "day": "Thursday", "start": "14:00", "end": "14:50", "type": "Lab" }
+  ],
+  "L50": [
+    { "day": "Thursday", "start": "14:51", "end": "15:40", "type": "Lab" }
+  ],
+  "L51": [
+    { "day": "Thursday", "start": "15:51", "end": "16:40", "type": "Lab" }
+  ],
+  "L52": [
+    { "day": "Thursday", "start": "16:41", "end": "17:30", "type": "Lab" }
+  ],
+  "L53": [
+    { "day": "Thursday", "start": "17:40", "end": "18:30", "type": "Lab" }
+  ],
+  "L54": [
+    { "day": "Thursday", "start": "18:31", "end": "19:20", "type": "Lab" }
+  ],
+  "L55": [
+    { "day": "Friday", "start": "14:00", "end": "14:50", "type": "Lab" }
+  ],
+  "L56": [
+    { "day": "Friday", "start": "14:51", "end": "15:40", "type": "Lab" }
+  ],
+  "L57": [
+    { "day": "Friday", "start": "15:51", "end": "16:40", "type": "Lab" }
+  ],
+  "L58": [
+    { "day": "Friday", "start": "16:41", "end": "17:30", "type": "Lab" }
+  ],
+  "L59": [
+    { "day": "Friday", "start": "17:40", "end": "18:30", "type": "Lab" }
+  ],
+  "L60": [
+    { "day": "Friday", "start": "18:31", "end": "19:20", "type": "Lab" }
+  ]
+}
