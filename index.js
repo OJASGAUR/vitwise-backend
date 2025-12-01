@@ -33,11 +33,15 @@ if (!process.env.OPENAI_API_KEY && process.env.ALLOW_NO_OPENAI !== "1") {
 }
 
 app.get("/", (req, res) => res.send("Vitwise Backend Running Successfully!"));
-app.get("/ping", (req, res) => res.json({ ok: true, time: Date.now() }));
+app.get("/ping", (req, res) => {
+  console.log('PING hit', { time: Date.now(), ip: req.ip, headers: { host: req.headers.host, 'user-agent': req.headers['user-agent'] } });
+  res.json({ ok: true, time: Date.now() });
+});
 app.get("/healthz", (req, res) => res.json({ ok: true }));
 
 // upload endpoint
 app.post("/api/upload", upload.single("image"), async (req, res) => {
+  console.log('UPLOAD hit', { url: req.originalUrl, method: req.method, ip: req.ip, filePresent: !!req.file, headersSnippet: { host: req.headers.host, 'content-type': req.headers['content-type'] } });
   const uploadedPath = req.file?.path;
   try {
     if (!req.file) {
