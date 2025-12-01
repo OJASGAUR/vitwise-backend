@@ -83,7 +83,10 @@ app.post("/api/upload", upload.single("image"), async (req, res) => {
     return res.json({ timetable, warnings });
   } catch (err) {
     console.error("Error in /api/upload:", err && err.stack ? err.stack : err);
-    return res.status(500).json({ error: err.message || "Internal server error" });
+    // Prevent leaking sensitive tokens (like OpenAI keys) to clients
+    const rawMessage = err && err.message ? String(err.message) : "Internal server error";
+    const safeMessage = rawMessage.replace(/sk-[A-Za-z0-9_-]{8,}/g, 'sk-REDACTED');
+    return res.status(500).json({ error: safeMessage });
   } finally {
     // best-effort cleanup
     if (uploadedPath) {
