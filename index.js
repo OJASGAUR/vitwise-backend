@@ -5,7 +5,9 @@ const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
 
-const extractCourses = require("./ocr/extractCourses");
+const OpenAI = require("openai");     // ✅ NEW (official SDK)
+const client = new OpenAI();
+
 const parseSlots = require("./timetable/parseSlots");
 const generateTimetable = require("./timetable/generateTimetable");
 const slotsLookup = require("./slots/slots.json");
@@ -15,63 +17,85 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Uploads folder
 const upload = multer({ dest: "uploads/" });
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, "uploads");
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+// Ensure folders
+const UPLOADS = path.join(__dirname, "uploads");
+const SAVED = path.join(__dirname, "saved_timetables");
+if (!fs.existsSync(UPLOADS)) fs.mkdirSync(UPLOADS, { recursive: true });
+if (!fs.existsSync(SAVED)) fs.mkdirSync(SAVED, { recursive: true });
 
-// Saved timetables directory
-const SAVED_DIR = path.join(__dirname, "saved_timetables");
-if (!fs.existsSync(SAVED_DIR)) fs.mkdirSync(SAVED_DIR, { recursive: true });
+// Health check for Render
+app.get("/healthz", (req, res) => res.json({ ok: true }));
 
-// Require OpenAI Key
-if (!process.env.OPENAI_API_KEY && process.env.ALLOW_NO_OPENAI !== "1") {
-  console.error("Missing OPENAI_API_KEY");
-  process.exit(1);
+// =============================
+// 📌 FIXED OCR FUNCTION
+// =============================
+async function extractCourses(imagePath) {
+  try {
+    const img = fs.readFileSync(imagePath, { encoding: "base64" });
+
+    const response = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are an OCR engine. Extract rows of courses strictly in JSON. Each row MUST have: courseCode, courseName, type, venue, slotString."
+        },
+        {
+          role: "user",
+          content: [
+            { type: "input_text", text: "Extract this timetable." },
+            { type: "input_image", image_url: `data:image/png;base64,${img}` }
+          ]
+        }
+      ]
+    });
+
+    const raw = response.choices[0].message.content.trim();
+
+    // **Absolute fix** for bad AI formatting
+    const clean = raw
+      .replace(/```json/gi, "")
+      .replace(/```/g, "")
+      .trim();
+
+    const parsed = JSON.parse(clean);
+    return parsed.rows || parsed;
+  } catch (err) {
+    console.error("OCR ERROR:", err);
+    throw new Error("OCR failed: Invalid JSON");
+  }
 }
 
-// ---------- Health Check ----------
-app.get("/healthz", (req, res) => {
-  res.status(200).json({ status: "ok" });
-});
-
-// Root route
-app.get("/", (req, res) => {
-  res.send("Vitwise Backend Running Successfully!");
-});
-
-// Ping (mobile test)
-app.get("/ping", (req, res) => {
-  res.json({ ok: true, time: Date.now() });
-});
-
-// ---------- Upload ----------
+// =============================
+// 📌 UPLOAD ENDPOINT
+// =============================
 app.post("/api/upload", upload.single("image"), async (req, res) => {
-  const uploadedPath = req.file?.path;
+  const file = req.file?.path;
+  if (!file) return res.status(400).json({ error: "No file uploaded" });
 
   try {
-    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
-
-    const extracted = await extractCourses(uploadedPath);
+    const extracted = await extractCourses(file);
     const warnings = [];
 
     const courses = extracted.map((row) => ({
       courseCode: row.courseCode,
       courseName: row.courseName || courseNames[row.courseCode] || row.courseCode,
       type: row.type,
-      venue: row.venue,
+      venue: row.venue || "NIL",
       rawSlotString: row.slotString,
       slots: parseSlots(row.slotString)
     }));
 
-    courses.forEach((c) =>
+    // Validate slots
+    courses.forEach((c) => {
       c.slots.forEach((s) => {
         if (!slotsLookup[s])
-          warnings.push({ type: "missing_slot", slot: s, course: c.courseCode });
-      })
-    );
+          warnings.push({ slot: s, course: c.courseCode });
+      });
+    });
 
     const timetable = generateTimetable(courses);
 
@@ -79,97 +103,14 @@ app.post("/api/upload", upload.single("image"), async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   } finally {
-    if (uploadedPath) fs.unlink(uploadedPath, () => {});
+    if (file) fs.unlink(file, () => {});
   }
 });
 
-// -------- Mock Auth + Save System --------
-const users = {};
-const otps = {};
-
-function generateOtp() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
-
-app.post("/api/signup", (req, res) => {
-  const { username, password, phone } = req.body;
-  if (!username || !password || !phone)
-    return res.status(400).json({ error: "Missing fields" });
-
-  if (users[phone]) return res.status(409).json({ error: "User exists" });
-
-  users[phone] = { username, password, phone };
-  res.json({ ok: true });
-});
-
-app.post("/api/login", (req, res) => {
-  const { phone, password } = req.body;
-  const u = users[phone];
-
-  if (!u) return res.status(404).json({ error: "User not found" });
-  if (u.password !== password)
-    return res.status(401).json({ error: "Invalid credentials" });
-
-  const token = Buffer.from(`${phone}:${Date.now()}`).toString("base64");
-  res.json({ token, username: u.username });
-});
-
-app.post("/api/send-otp", (req, res) => {
-  const { phone } = req.body;
-  const code = generateOtp();
-  const expiresAt = Date.now() + 5 * 60 * 1000;
-
-  otps[phone] = { code, expiresAt };
-
-  res.json({ ok: true, otp: code });
-});
-
-app.post("/api/verify-otp", (req, res) => {
-  const { phone, code } = req.body;
-
-  const record = otps[phone];
-  if (!record) return res.status(404).json({ error: "OTP not found" });
-  if (Date.now() > record.expiresAt)
-    return res.status(410).json({ error: "OTP expired" });
-  if (record.code !== code)
-    return res.status(401).json({ error: "Invalid OTP" });
-
-  delete otps[phone];
-  res.json({ ok: true });
-});
-
-function phoneFromToken(token) {
-  try {
-    return Buffer.from(token, "base64").toString("utf8").split(":")[0];
-  } catch {
-    return null;
-  }
-}
-
-app.post("/api/save-timetable", (req, res) => {
-  const token = (req.headers.authorization || "").replace("Bearer ", "");
-  const phone = phoneFromToken(token);
-  if (!phone) return res.status(401).json({ error: "Invalid token" });
-
-  const file = path.join(SAVED_DIR, `${phone}.json`);
-  fs.writeFileSync(file, JSON.stringify(req.body, null, 2));
-
-  res.json({ ok: true });
-});
-
-app.get("/api/load-timetable", (req, res) => {
-  const token = (req.headers.authorization || "").replace("Bearer ", "");
-  const phone = phoneFromToken(token);
-  if (!phone) return res.status(401).json({ error: "Invalid token" });
-
-  const file = path.join(SAVED_DIR, `${phone}.json`);
-  if (!fs.existsSync(file))
-    return res.status(404).json({ error: "Not found" });
-
-  res.json(JSON.parse(fs.readFileSync(file, "utf-8")));
-});
-
+// =============================
+// 📌 START SERVER
+// =============================
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, "0.0.0.0", () =>
-  console.log(`Backend running on port ${PORT}`)
+  console.log("Backend running on:", PORT)
 );
