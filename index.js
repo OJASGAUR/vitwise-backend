@@ -15,31 +15,39 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Multer uploads folder
+// Uploads folder
 const upload = multer({ dest: "uploads/" });
 
-// Ensure uploads folder exists
+// Ensure uploads directory exists
 const uploadsDir = path.join(__dirname, "uploads");
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
-// Ensure saved timetable folder exists
+// Saved timetables directory
 const SAVED_DIR = path.join(__dirname, "saved_timetables");
 if (!fs.existsSync(SAVED_DIR)) fs.mkdirSync(SAVED_DIR, { recursive: true });
 
-// Validate OpenAI Key
+// Require OpenAI Key
 if (!process.env.OPENAI_API_KEY && process.env.ALLOW_NO_OPENAI !== "1") {
   console.error("Missing OPENAI_API_KEY");
   process.exit(1);
 }
 
+// ---------- Health Check ----------
+app.get("/healthz", (req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
+// Root route
 app.get("/", (req, res) => {
   res.send("Vitwise Backend Running Successfully!");
 });
 
+// Ping (mobile test)
 app.get("/ping", (req, res) => {
   res.json({ ok: true, time: Date.now() });
 });
 
+// ---------- Upload ----------
 app.post("/api/upload", upload.single("image"), async (req, res) => {
   const uploadedPath = req.file?.path;
 
@@ -55,15 +63,15 @@ app.post("/api/upload", upload.single("image"), async (req, res) => {
       type: row.type,
       venue: row.venue,
       rawSlotString: row.slotString,
-      slots: parseSlots(row.slotString),
+      slots: parseSlots(row.slotString)
     }));
 
-    // validate slots
-    courses.forEach((c) => {
+    courses.forEach((c) =>
       c.slots.forEach((s) => {
-        if (!slotsLookup[s]) warnings.push({ type: "missing_slot", slot: s, course: c.courseCode });
-      });
-    });
+        if (!slotsLookup[s])
+          warnings.push({ type: "missing_slot", slot: s, course: c.courseCode });
+      })
+    );
 
     const timetable = generateTimetable(courses);
 
@@ -75,7 +83,7 @@ app.post("/api/upload", upload.single("image"), async (req, res) => {
   }
 });
 
-// simple in-memory login
+// -------- Mock Auth + Save System --------
 const users = {};
 const otps = {};
 
@@ -85,7 +93,8 @@ function generateOtp() {
 
 app.post("/api/signup", (req, res) => {
   const { username, password, phone } = req.body;
-  if (!username || !password || !phone) return res.status(400).json({ error: "Missing fields" });
+  if (!username || !password || !phone)
+    return res.status(400).json({ error: "Missing fields" });
 
   if (users[phone]) return res.status(409).json({ error: "User exists" });
 
@@ -96,8 +105,10 @@ app.post("/api/signup", (req, res) => {
 app.post("/api/login", (req, res) => {
   const { phone, password } = req.body;
   const u = users[phone];
+
   if (!u) return res.status(404).json({ error: "User not found" });
-  if (u.password !== password) return res.status(401).json({ error: "Invalid credentials" });
+  if (u.password !== password)
+    return res.status(401).json({ error: "Invalid credentials" });
 
   const token = Buffer.from(`${phone}:${Date.now()}`).toString("base64");
   res.json({ token, username: u.username });
@@ -109,7 +120,8 @@ app.post("/api/send-otp", (req, res) => {
   const expiresAt = Date.now() + 5 * 60 * 1000;
 
   otps[phone] = { code, expiresAt };
-  res.json({ ok: true, otp: code }); // Debug mode
+
+  res.json({ ok: true, otp: code });
 });
 
 app.post("/api/verify-otp", (req, res) => {
@@ -117,8 +129,10 @@ app.post("/api/verify-otp", (req, res) => {
 
   const record = otps[phone];
   if (!record) return res.status(404).json({ error: "OTP not found" });
-  if (Date.now() > record.expiresAt) return res.status(410).json({ error: "Expired" });
-  if (record.code !== code) return res.status(401).json({ error: "Invalid" });
+  if (Date.now() > record.expiresAt)
+    return res.status(410).json({ error: "OTP expired" });
+  if (record.code !== code)
+    return res.status(401).json({ error: "Invalid OTP" });
 
   delete otps[phone];
   res.json({ ok: true });
@@ -135,7 +149,6 @@ function phoneFromToken(token) {
 app.post("/api/save-timetable", (req, res) => {
   const token = (req.headers.authorization || "").replace("Bearer ", "");
   const phone = phoneFromToken(token);
-
   if (!phone) return res.status(401).json({ error: "Invalid token" });
 
   const file = path.join(SAVED_DIR, `${phone}.json`);
@@ -147,13 +160,16 @@ app.post("/api/save-timetable", (req, res) => {
 app.get("/api/load-timetable", (req, res) => {
   const token = (req.headers.authorization || "").replace("Bearer ", "");
   const phone = phoneFromToken(token);
+  if (!phone) return res.status(401).json({ error: "Invalid token" });
 
   const file = path.join(SAVED_DIR, `${phone}.json`);
+  if (!fs.existsSync(file))
+    return res.status(404).json({ error: "Not found" });
 
-  if (!fs.existsSync(file)) return res.status(404).json({ error: "Not found" });
-
-  res.json(JSON.parse(fs.readFileSync(file, "utf8")));
+  res.json(JSON.parse(fs.readFileSync(file, "utf-8")));
 });
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, "0.0.0.0", () => console.log(`Backend running on ${PORT}`));
+app.listen(PORT, "0.0.0.0", () =>
+  console.log(`Backend running on port ${PORT}`)
+);
