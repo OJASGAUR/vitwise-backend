@@ -1,87 +1,52 @@
 // backend/ocr/extractCourses.js
 const fs = require("fs");
 const OpenAI = require("openai");
+const { createWorker } = require("tesseract.js");
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-/**
- * STRICT OCR extraction of timetable rows
- * ZERO normalisation, abbreviation, interpretation or correction
- */
 module.exports = async function extractCourses(imagePath) {
   try {
-    // Read & encode image
-    const base64 = fs.readFileSync(imagePath, { encoding: "base64" });
+    // STEP 1: Local OCR (free)
+    const worker = await createWorker();
+    await worker.loadLanguage("eng");
+    await worker.initialize("eng");
 
+    const { data } = await worker.recognize(imagePath);
+    await worker.terminate();
+
+    const rawText = data.text;
+
+    if (!rawText || rawText.trim().length === 0) {
+      throw new Error("OCR returned empty text");
+    }
+
+    // STEP 2: Convert raw text into structured JSON (cheap)
     const response = await client.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-4o-mini",  // cheap text model
+      temperature: 0,
       response_format: { type: "json_object" },
-
       messages: [
         {
           role: "system",
           content:
-            "You are performing STRICT OCR extraction from an image. " +
-            "You MUST return text EXACTLY as printed, including repeated letters, " +
-            "digits, punctuation, spacing, and capitalization. " +
-            "Do NOT guess, interpret, fix, shorten, or normalize text. " +
-            "If a slot is printed as 'TAA2', it MUST be returned as 'TAA2', not 'TA2'. " +
-            "Do NOT change 'L16' to 'L6', do NOT fix typos, do NOT remove characters. " +
-            "If uncertain, copy literally.\n\n" +
-
-            "Extract ALL timetable rows visible.\n\n" +
-
-            "Return ONLY valid JSON in the EXACT format:\n" +
-            "{ \"rows\": [ { \"courseCode\":\"\", \"courseName\":\"\", \"slotString\":\"\", \"type\":\"\", \"venue\":\"\" } ] }\n\n" +
-
-            "rules:\n" +
-            "- courseCode: EXACT text, no normalization\n" +
-            "- courseName: EXACT text, no paraphrasing\n" +
-            "- slotString: EXACT text, including repeating characters\n" +
-            "- type: EXACT text\n" +
-            "- venue: EXACT text\n\n" +
-
-            "The output must contain ONLY JSON with no commentary."
+            "Extract timetable rows from raw OCR text.\n" +
+            "Return EXACT strings without changing characters.\n\n" +
+            "Return ONLY JSON in this format:\n" +
+            "{ \"rows\": [ { \"courseCode\":\"\", \"courseName\":\"\", \"slotString\":\"\", \"type\":\"\", \"venue\":\"\" } ] }"
         },
-
         {
           role: "user",
-          content: [
-            { type: "text", text: "Perform STRICT OCR. Return exact text. No corrections." },
-            {
-              type: "image_url",
-              image_url: {
-                url: `data:image/jpeg;base64,${base64}`
-              }
-            }
-          ]
+          content:
+            "Raw OCR text:\n\n" + rawText
         }
-      ],
-
-      // Do not let model explain anything
-      temperature: 0,
-      stop: ["Note:", "Explanation:", "```"]
+      ]
     });
 
-    // Parse
-    let rawJson = response.choices?.[0]?.message?.content;
-
-    if (!rawJson) {
-      throw new Error("Missing response content from OpenAI");
-    }
-
-    let json;
-
-    try {
-      json = JSON.parse(rawJson);
-    } catch (err) {
-      console.error("JSON parse fail:", rawJson);
-      throw new Error("OCR returned invalid JSON");
-    }
+    const json = JSON.parse(response.choices[0].message.content);
 
     if (!json.rows || !Array.isArray(json.rows)) {
-      console.error("Invalid JSON structure:", json);
-      throw new Error("OCR returned invalid structure");
+      throw new Error("Invalid JSON returned");
     }
 
     return json.rows;
