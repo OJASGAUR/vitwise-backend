@@ -1,30 +1,48 @@
-const extractText = require("./ocrSpace");
+const fs = require("fs");
 const OpenAI = require("openai");
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
+/**
+ * Input: path to uploaded image
+ * Output: array of extracted rows
+ *  [
+ *    {
+ *      courseCode: "",
+ *      courseName: "",
+ *      slotString: "",
+ *      type: "",
+ *      venue: ""
+ *    }
+ *  ]
+ */
 module.exports = async function extractCourses(imagePath) {
   try {
-    // 1) Do OCR (free, raw text)
-    const text = await extractText(imagePath);
+    // Read file into base64
+    const base64 = fs.readFileSync(imagePath, { encoding: "base64" });
 
-    // 2) Send to GPT for structuring
     const response = await client.chat.completions.create({
       model: "gpt-4o-mini",
       response_format: { type: "json_object" },
+
       messages: [
         {
           role: "system",
           content: `
-You will be given timetable RAW text.
+You will be given an image of a university timetable.
+Extract ALL rows accurately.
 
-STRICT RULES:
-- Do NOT correct codes.
-- Do NOT remove repeated letters.
-- Do NOT convert "TAA2" to "TA2".
-- Return EXACT text as-is.
+IMPORTANT RULES (STRICT):
+- NEVER correct slot codes.
+- NEVER remove repeated letters.
+- DO NOT convert TAA2 to TA2.
+- Keep all codes EXACT as written.
+- If text is unclear, copy EXACTLY as seen.
+- DO NOT invent missing data.
 
-Return JSON only:
+Output must be ONLY JSON:
 
 {
   "rows":[
@@ -41,19 +59,31 @@ Return JSON only:
         },
         {
           role: "user",
-          content: text
+          content: [
+            { type: "text", text: "Extract timetable rows from this image." },
+            {
+              type: "image_url",
+              image_url: { url: `data:image/jpeg;base64,${base64}` }
+            }
+          ]
         }
-      ]
+      ],
     });
 
-    const json = JSON.parse(response.choices[0].message.content);
+    // Parse JSON
+    let json;
+    try {
+      json = JSON.parse(response.choices[0].message.content);
+    } catch (e) {
+      throw new Error("GPT did not return valid JSON");
+    }
 
+    // Ensure the structure exists
     if (!json.rows || !Array.isArray(json.rows)) {
-      throw new Error("OCR JSON invalid");
+      throw new Error("JSON missing rows[]");
     }
 
     return json.rows;
-
   } catch (err) {
     console.error("extractCourses ERROR:", err);
     throw new Error("OCR failed: " + err.message);
