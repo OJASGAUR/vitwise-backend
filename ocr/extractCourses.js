@@ -1,44 +1,47 @@
-// backend/ocr/extractCourses.js
-const fs = require("fs");
+const extractText = require("./ocrSpace");
 const OpenAI = require("openai");
-const { createWorker } = require("tesseract.js");
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 module.exports = async function extractCourses(imagePath) {
   try {
-    // STEP 1: Local OCR (free)
-    const worker = await createWorker();
-    await worker.loadLanguage("eng");
-    await worker.initialize("eng");
+    // 1) Do OCR (free, raw text)
+    const text = await extractText(imagePath);
 
-    const { data } = await worker.recognize(imagePath);
-    await worker.terminate();
-
-    const rawText = data.text;
-
-    if (!rawText || rawText.trim().length === 0) {
-      throw new Error("OCR returned empty text");
-    }
-
-    // STEP 2: Convert raw text into structured JSON (cheap)
+    // 2) Send to GPT for structuring
     const response = await client.chat.completions.create({
-      model: "gpt-4o-mini",  // cheap text model
-      temperature: 0,
+      model: "gpt-4o-mini",
       response_format: { type: "json_object" },
       messages: [
         {
           role: "system",
-          content:
-            "Extract timetable rows from raw OCR text.\n" +
-            "Return EXACT strings without changing characters.\n\n" +
-            "Return ONLY JSON in this format:\n" +
-            "{ \"rows\": [ { \"courseCode\":\"\", \"courseName\":\"\", \"slotString\":\"\", \"type\":\"\", \"venue\":\"\" } ] }"
+          content: `
+You will be given timetable RAW text.
+
+STRICT RULES:
+- Do NOT correct codes.
+- Do NOT remove repeated letters.
+- Do NOT convert "TAA2" to "TA2".
+- Return EXACT text as-is.
+
+Return JSON only:
+
+{
+  "rows":[
+    {
+      "courseCode":"",
+      "courseName":"",
+      "slotString":"",
+      "type":"",
+      "venue":""
+    }
+  ]
+}
+`
         },
         {
           role: "user",
-          content:
-            "Raw OCR text:\n\n" + rawText
+          content: text
         }
       ]
     });
@@ -46,7 +49,7 @@ module.exports = async function extractCourses(imagePath) {
     const json = JSON.parse(response.choices[0].message.content);
 
     if (!json.rows || !Array.isArray(json.rows)) {
-      throw new Error("Invalid JSON returned");
+      throw new Error("OCR JSON invalid");
     }
 
     return json.rows;
