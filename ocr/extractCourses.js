@@ -34,13 +34,11 @@ module.exports = async function extractCourses(imagePath) {
 You will be given an image of a university timetable.
 Extract ALL rows accurately.
 
-IMPORTANT RULES (STRICT):
-- NEVER correct slot codes.
-- NEVER remove repeated letters.
-- Keep codes like TAA1 as it is DO NOT convert TAA1 to TA1.
-- Keep all codes EXACT as written.
-- If text is unclear, copy EXACTLY as seen.
-- DO NOT invent missing data.
+VERY IMPORTANT:
+- Do NOT modify slot codes in ANY way.
+- Do NOT shorten repeated letters.
+- Do NOT convert codes like TAA1 to TA1. (very strictly retain original codes)
+- Slot codes must match EXACTLY as seen in the image.
 
 Output must be ONLY JSON:
 
