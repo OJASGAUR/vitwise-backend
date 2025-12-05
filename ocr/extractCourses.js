@@ -37,7 +37,7 @@ Extract ALL rows accurately.
 IMPORTANT RULES (STRICT):
 - NEVER correct slot codes.
 - NEVER remove repeated letters.
-- DO NOT convert TAA1 to TA1 .
+- Keep codes like TAA1 as it is DO NOT convert TAA1 to TA1.
 - Keep all codes EXACT as written.
 - If text is unclear, copy EXACTLY as seen.
 - DO NOT invent missing data.
